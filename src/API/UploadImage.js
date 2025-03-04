@@ -12,21 +12,18 @@ export async function localFileToURL(file) {
     });
 }
 
-
 export async function getImages() {
     await delay();
     return JSON.parse(localStorage.getItem('images') || '[]');
-}
-
-
-
-export async function saveImage(file) {
+  }
+  
+  export async function saveImage(file) {
     await delay();
     const url = await localFileToURL(file);
     const images = JSON.parse(localStorage.getItem('images') || '[]');
     images.push({
-        id: Date.now().toString(),
-        url,
+      id: Date.now().toString(),
+      url,
     });
     localStorage.setItem('images', JSON.stringify(images));
-}
+  }

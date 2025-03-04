@@ -13,6 +13,8 @@ import AsstesImage from './Page/AsstesImage';
 import { TemplatesSection } from './Page/CustomTemplate';
 import VideoSection from './Page/VideoSection';
 import SaveFileDialog from './Page/DialogSaveFile';
+import UploadPanel from './Page/UploadPanel';
+import { saveAssetsAction } from './API/APICallingAll';
 
 const store = createStore({
   key: 'nFA5H9elEytDyPyvKL7T',
@@ -22,14 +24,13 @@ const store = createStore({
 const page = store.addPage();
 store.toggleRulers();
 
-const sections = [AsstesImage, TemplatesSection, VideoSection, TextSection, ElementsSection, SizeSection, BackgroundSection];
+const sections = [AsstesImage, UploadPanel, TemplatesSection, VideoSection, TextSection, ElementsSection, SizeSection, BackgroundSection];
 
 const generateFileName = () => {
   const randomNumber = Math.floor(1000000000 + Math.random() * 9000000000);
   const currentDate = new Date().toISOString().split('T')[0];
   return `disploy-${randomNumber}-${currentDate}`;
 };
-
 
 const CustomToolbar = ({ store }) => {
 
@@ -38,20 +39,6 @@ const CustomToolbar = ({ store }) => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-
-  const downloadImage = async () => {
-    try {
-      const image = await store.toDataURL({ pixelRatio: 2 });
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `${fileName}.png`;
-      link.click();
-    } catch (error) {
-      console.error('Error exporting image:', error);
-    } finally {
-      setDialogOpen(false);
-    }
-  };
 
   const dataURLToBlob = (dataURL) => {
     const parts = dataURL.split(',');
@@ -66,6 +53,7 @@ const CustomToolbar = ({ store }) => {
 
   const saveAssetsImage = async () => {
     try {
+      // console.log('store', store.toJSON())
       const image = await store.toDataURL({ pixelRatio: 2 });
       const blob = dataURLToBlob(image);
       const formData = new FormData();
@@ -75,11 +63,7 @@ const CustomToolbar = ({ store }) => {
       formData.append('IsActive', true);
       formData.append('IsDelete', false);
       formData.append('FolderID', 0);
-      const url = 'https://back.disploy.com/api/AssetMaster/AssetUpload';
-      const token = 'Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxMjUiLCJ1bmlxdWVfbmFtZSI6ImhldGFsLnByYWphcGF0aUB0aGVkZXN0aW55c29sdXRpb25zLmNvbSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL3N5c3RlbSI6IkluZGlhIFN0YW5kYXJkIFRpbWUiLCJuYmYiOjE3MzMyMjMwMTYsImV4cCI6MTczMzQ4MjIxNiwiaWF0IjoxNzMzMjIzMDE2fQ.VPiTRo77O3zkbie7WjSenMZ1qX46TmXQ1eTm3RV7jzCWHQ8jsNt54JNMz2Hyp5VkT4imwEsKUJjcUnyar22hwA';
-      const response = await fetch(url, { method: 'POST', body: formData, headers: { Authorization: token } });
-     
-      // save Image
+      await saveAssetsAction(formData)   // APi Action
       const link = document.createElement('a');
       link.href = image;
       link.download = `${fileName}.png`;
@@ -146,6 +130,7 @@ const CustomToolbar = ({ store }) => {
     setProgress(0);
   };
 
+  // video button
   const downloadFile = async (url, filename) => {
     const response = await fetch(url);
     const blob = await response.blob();
@@ -156,9 +141,7 @@ const CustomToolbar = ({ store }) => {
     formData.append('IsActive', true);
     formData.append('IsDelete', false);
     formData.append('FolderID', 0);
-    const APIurl = 'https://back.disploy.com/api/AssetMaster/AssetUpload';
-    const token = 'Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxMjUiLCJ1bmlxdWVfbmFtZSI6ImhldGFsLnByYWphcGF0aUB0aGVkZXN0aW55c29sdXRpb25zLmNvbSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL3N5c3RlbSI6IkluZGlhIFN0YW5kYXJkIFRpbWUiLCJuYmYiOjE3MzMyMjMwMTYsImV4cCI6MTczMzQ4MjIxNiwiaWF0IjoxNzMzMjIzMDE2fQ.VPiTRo77O3zkbie7WjSenMZ1qX46TmXQ1eTm3RV7jzCWHQ8jsNt54JNMz2Hyp5VkT4imwEsKUJjcUnyar22hwA';
-    const getResponse = await fetch(APIurl, { method: 'POST', body: formData, headers: { Authorization: token } });
+    await saveAssetsAction(formData)   // APi Action
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
@@ -181,7 +164,6 @@ const CustomToolbar = ({ store }) => {
         setFileName={setFileName}
         downloadVideo={downloadVideo}
         saveAssetsImage={saveAssetsImage}
-        downloadImage={downloadImage}
       />
 
     </>
@@ -190,17 +172,7 @@ const CustomToolbar = ({ store }) => {
 
 export const App = ({ store }) => {
   return (
-    <div
-      style={{
-        display: 'flex',
-        height: '100%',
-        margin: 'auto',
-        flex: 1,
-        flexDirection: 'column',
-        position: 'relative',
-      }}
-    >
-
+    <div style={{ display: 'flex', height: '100%', margin: 'auto', flex: 1, flexDirection: 'column', position: 'relative' }} >
       <PolotnoContainer>
         <SidePanelWrap>
           <SidePanel

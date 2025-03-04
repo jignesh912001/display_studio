@@ -4,82 +4,57 @@ import { Button } from '@blueprintjs/core';
 import { ImagesGrid, SectionTab } from 'polotno/side-panel';
 import FaCloudUploadAlt from '@meronex/icons/fa/FaCloudUploadAlt';
 import { getImages, saveImage } from '../API/UploadImage';
+import { getAssetsAction, saveAssetsAction } from '../API/APICallingAll';
 import { getImageSize } from 'polotno/utils/image';
-
 
 
 const UploadPanel = {
   name: 'uploaad',
   Tab: (props) => (
-    <SectionTab name="Uploaad" {...props}>
+    <SectionTab name="Upload" {...props}>
       <FaCloudUploadAlt icon="new-text-box" />
     </SectionTab>
   ),
   Panel: ({ store }) => {
 
-    const [images, setImages] = React.useState([]);
-    const [isUploading, setUploading] = React.useState(false);
+    const [images, setImages] = useState([]);
+    const [isUploading, setUploading] = useState(false);
 
-    useEffect(() => {
-      loadImage()
-    }, [])
 
     const loadImage = async () => {
-      const images = await getImages();
-      setImages(images);
+      const response = await getAssetsAction({ assetsType: "CanvaUploadImage" })
+      console.log('response', response)
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const data = response.data.data;
+      setImages(data);
     };
 
     const handleFileInput = async (e) => {
       const { target } = e;
+      const files = e.target.files;
       setUploading(true);
-      for (const file of target.files) {
-        await saveImage(file);
-      }
+      const formData = new FormData();
+      Array.from(files).forEach((file) => { formData.append('File', file) });
+      formData.append("Operation", "Insert");
+      formData.append("AssetType", "CanvaUploadImage");
+      formData.append("IsActive", "true");
+      formData.append("IsDelete", "false");
+      formData.append("FolderID", "0");
+
+      await saveAssetsAction(formData)
       await loadImage();
       setUploading(false);
       target.value = null;
     };
 
-
-    const handleSelectImage = async (image, pos, element) => {
-      const { url } = image;
-      let { width, height } = await getImageSize(url);
-      const isSVG = url.indexOf('svg+xml') >= 0 || url.indexOf('.svg') >= 0;
-      const type = isSVG ? 'svg' : 'image';
-
-      if (element) {
-        if (!element.locked) {
-          if (element.type === 'image' && type === 'image') {
-            element.set({ src: url });
-          } else if (element.type === 'svg' && type === 'image') {
-            element.set({ maskSrc: url });
-          }
-        }
-        return;
-      }
-
-      // Calculate appropriate scaling for the new image or svg
-      const scale = Math.min(store.width / width, store.height / height, 1);
-      width = width * scale;
-      height = height * scale;
-
-      const x = (pos?.x || store.width / 2) - width / 2;
-      const y = (pos?.y || store.height / 2) - height / 2;
-
-      // Add new element to the canvas
-      store.activePage?.addElement({
-        type,
-        src: url,
-        x,
-        y,
-        width,
-        height,
-      });
-    };
+    useEffect(() => {
+      loadImage()
+    }, [])
 
     return (
       <>
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+
           <div style={{ marginBottom: '20px' }}>
             <label htmlFor="input-file">
               <Button
@@ -88,8 +63,9 @@ const UploadPanel = {
                 onClick={() => { document.querySelector('#input-file')?.click() }}
                 loading={isUploading}
               >
-                Upload Image (use small image)
+                Upload Image ( Add File )
               </Button>
+
               <input
                 type="file"
                 id="input-file"
@@ -98,13 +74,35 @@ const UploadPanel = {
                 multiple
               />
             </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '10px' }}>
+
+            <div style={{ height: '920px', display: 'flex', flexDirection: 'column' }}>
+
               <ImagesGrid
+                images={images}
+                getPreview={(image) => image.assetFolderPath}
+                onSelect={async (image, pos) => {
+                  const { width, height } = await getImageSize(image.assetFolderPath);
+                  store.activePage.addElement({
+                    type: 'image',
+                    src: image.assetFolderPath,
+                    width,
+                    height,
+                    x: pos ? pos.x : store.width / 2 - width / 2,
+                    y: pos ? pos.y : store.height / 2 - height / 2,
+                  });
+                }}
+                rowsNumber={2}
+                // isLoading={!images.length}
+                loadMore={false}
+              />
+
+
+              {/* <ImagesGrid
                 images={images}
                 getPreview={(image) => image.url}
                 crossOrigin="anonymous"
-                onSelect={handleSelectImage}
-              />
+              onSelect={handleSelectImage}
+              /> */}
             </div>
           </div>
         </div>

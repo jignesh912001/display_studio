@@ -9,7 +9,6 @@ const SaveFileDialog = ({ isDialogOpen,
     loading,
     downloadVideo,
     saveAssetsImage,
-    downloadImage
 }) => {
 
     return (
@@ -94,21 +93,7 @@ const SaveFileDialog = ({ isDialogOpen,
                 >
                     {loading ? progress > 0 ? `Downloading... ${progress}%` : "Downloading..." : "Save Video and Download"}
                 </Button>
-                {/* <Button
-                    intent="primary"
-                    onClick={downloadImage}
-                    style={{
-                        backgroundColor: loading ? "#007bff" : "#004aad",
-                        border: "none",
-                        color: "#fff",
-                        borderRadius: "8px",
-                        padding: "10px 20px",
-                        fontWeight: "bold",
-                        cursor: "pointer",
-                    }}
-                >
-                    Save Image
-                </Button> */}
+               
                 <Button
                     intent="primary"
                     onClick={saveAssetsImage}
