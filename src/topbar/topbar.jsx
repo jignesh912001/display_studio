@@ -19,7 +19,7 @@ import SaveFileDialog from '../Page/DialogSaveFile';
 
 import { FileMenu } from './file-menu';
 import { DownloadButton } from './download-button';
-import { saveAssetsAction } from '../API/APICallingAll';
+import { saveAssetsAction, saveMyTemplateAction } from '../API/APICallingAll';
 
 const NavbarContainer = styled('div')`
   white-space: nowrap;
@@ -46,13 +46,12 @@ export default observer(({ store }) => {
     return `disploy-${randomNumber}-${currentDate}`;
   };
 
-
-  const project = useProject();
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [fileName, setFileName] = useState(generateFileName());
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [saving, setSaving] = React.useState(false);
+  const [saving, setSaving] = useState(false);
+  const [designsLoadings, setDesignsLoading] = useState(false);
 
   const dataURLToBlob = (dataURL) => {
     const parts = dataURL.split(',');
@@ -71,7 +70,6 @@ export default observer(({ store }) => {
       // console.log('store', store.toJSON())
       const image = await store.toDataURL({ pixelRatio: 2 });
       const blob = dataURLToBlob(image);
-      console.log('formData', blob)
       const formData = new FormData();
       formData.append('File', blob, 'image.png');
       formData.append('Operation', 'Insert');
@@ -160,39 +158,41 @@ export default observer(({ store }) => {
     setLoading(false)
   };
 
+  // Function to save current design as JSON
+  const saveTemplate = async () => {
+    const json = store.toJSON();
+    const Preview = await store.toDataURL()
+    const payload = {
+      previewImage: Preview,
+      templateJson: JSON.stringify(json),
+    }
+    saveMyTemplateAction(payload)
+  };
+
+  const getBtn = localStorage.getItem("isSaveTemplate")
 
   return (
     <NavbarContainer className="bp5-navbar">
       <NavInner>
-        <Navbar.Group align={Alignment.LEFT}>
-          {/* <FileMenu store={store} project={project} /> */}
-          <div
+        <Navbar.Group align={Alignment.RIGHT}>
+          <Button onClick={() => setDialogOpen(true)}>Download</Button>
+          {/* <Button
+            disabled={!getBtn}
+            onClick={saveTemplate}
             style={{
-              maxWidth: '200px',
-              fontWeight: "bold",
+              padding: '10px 20px',
+              marginRight: '10px',
+              background: '#252a31',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              marginLeft: "10px"
             }}
           >
-            <b>Project Name : </b>
-            <EditableText
-              style={{
-                color:"#FFF"
-              }}
-              value={window.project.name}
-              placeholder="Enter Your Design name"
-              onChange={(name) => {
-                window.project.name = name;
-                setFileName(name)
-                window.project.requestSave();
-              }}
-            />
-          </div>
-        </Navbar.Group>
-        <Navbar.Group align={Alignment.RIGHT}>
+            Save Template
+          </Button> */}
 
-
-          {/* <DownloadButton store={store} /> */}
-
-          <Button onClick={() => setDialogOpen(true)}>Download</Button>
 
           <SaveFileDialog
             isDialogOpen={isDialogOpen}

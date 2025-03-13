@@ -1,143 +1,68 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   Button,
-  Card,
-  Menu,
-  MenuItem,
-  Position,
   Spinner,
-  Popover,
 } from '@blueprintjs/core';
-import { DocumentOpen, Trash, More } from '@blueprintjs/icons';
-
-import { CloudWarning } from '../cloud-warning';
-
-import { SectionTab } from 'polotno/side-panel';
+import { ImagesGrid, SectionTab } from 'polotno/side-panel';
 import FaFolder from '@meronex/icons/fa/FaFolder';
 import { useProject } from '../project';
-import * as api from '../api';
-
-const DesignCard = observer(({ design, store, onDelete }) => {
-  const [loading, setLoading] = React.useState(false);
-  const [previewURL, setPreviewURL] = React.useState(design.previewURL);
-
-  React.useEffect(() => {
-    const load = async () => {
-      try {
-        const url = await api.getPreview({ id: design.id });
-        setPreviewURL(url);
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    load();
-  }, []);
-
-  const handleSelect = async () => {
-    setLoading(true);
-    window.project.loadById(design.id);
-    setLoading(false);
-  };
-
-  return (
-    <Card
-      style={{ margin: '3px', padding: '0px', position: 'relative' }}
-      interactive
-      onClick={() => {
-        handleSelect();
-      }}
-    >
-      <img src={previewURL} style={{ width: '100%', minHeight: '100px' }} />
-      <div
-        style={{
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          padding: '3px',
-        }}
-      >
-        {design.name || 'Untitled'}
-      </div>
-      {loading && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <Spinner />
-        </div>
-      )}
-      <div
-        style={{ position: 'absolute', top: '5px', right: '5px' }}
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        <Popover
-          content={
-            <Menu>
-              <MenuItem
-                icon={<DocumentOpen />}
-                text="Open"
-                onClick={() => {
-                  handleSelect();
-                }}
-              />
-              <MenuItem
-                icon={<Trash />}
-                text="Delete"
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to delete it?')) {
-                    onDelete({ id: design.id });
-                  }
-                }}
-              />
-            </Menu>
-          }
-          position={Position.BOTTOM}
-        >
-          <Button icon={<More />} />
-        </Popover>
-      </div>
-    </Card>
-  );
-});
+import { fetchTemplateJsonMyDesign, getMyTemplateAction, saveMyTemplateAction } from '../API/APICallingAll';
+import LoadingBar from "react-top-loading-bar";
 
 export const MyDesignsPanel = observer(({ store }) => {
   const project = useProject();
   const [designsLoadings, setDesignsLoading] = React.useState(false);
   const [designs, setDesigns] = React.useState([]);
+  const progressRef = useRef(null); // Ref for progress bar
 
   const loadDesigns = async () => {
     setDesignsLoading(true);
-    const list = await api.listDesigns();
-    setDesigns(list);
+    const respons = await getMyTemplateAction()
+    const data = respons?.data?.data
+    if (respons.status === 200) {
+      setDesigns(data)
+    }
     setDesignsLoading(false);
   };
 
-  const handleProjectDelete = ({ id }) => {
-    setDesigns(designs.filter((design) => design.id !== id));
-    api.deleteDesign({ id });
-  };
 
   React.useEffect(() => {
     loadDesigns();
-  }, [project.cloudEnabled, project.designsLength]);
+  }, [project.designsLength]);
 
-  const half1 = [];
-  const half2 = [];
-
-  designs.forEach((design, index) => {
-    if (index % 2 === 0) {
-      half1.push(design);
-    } else {
-      half2.push(design);
+  const fetchTemplateJson = async (id) => {
+    try {
+      progressRef.current.continuousStart();
+      const payload = { canvaMyDesignsID: id }
+      const response = await fetchTemplateJsonMyDesign(payload);
+      const data = response.data.data
+      const json = await JSON.parse(data.templateJson);
+      store.loadJSON(json);
+      progressRef.current.complete(); // Hide progress bar on success
+    } catch (error) {
+      console.error("Error fetching template JSON:", error);
+      progressRef.current.staticStart(); // Keep progress bar visible on error
+      return null;
     }
-  });
+  };
+
+  // Function to save current design as JSON
+  const saveTemplate = async () => {
+    try {
+      progressRef.current.continuousStart();
+      const json = store.toJSON();
+      const Preview = await store.toDataURL()
+      const payload = { previewImage: Preview, templateJson: JSON.stringify(json) }
+      await saveMyTemplateAction(payload)
+      loadDesigns();
+      progressRef.current.complete(); // Hide progress bar on success
+    } catch (error) {
+      console.error("Error fetching template JSON saveTemplate :", error);
+      progressRef.current.staticStart(); // Keep progress bar visible on error
+      return null;
+    }
+  };
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -146,50 +71,59 @@ export const MyDesignsPanel = observer(({ store }) => {
         intent="primary"
         onClick={async () => {
           await project.createNewDesign();
-          loadDesigns();
+          localStorage.setItem("isSaveTemplate", true)
         }}
       >
         Create new design
       </Button>
-      {!designsLoadings && !designs.length && (
-        <div style={{ paddingTop: '20px', textAlign: 'center', opacity: 0.6 }}>
-          You have no saved designs yet...
-        </div>
-      )}
-      {designsLoadings && (
+
+      {/* Progress Bar */}
+      <LoadingBar color="#f11946" ref={progressRef} />
+
+      <Button
+        onClick={saveTemplate}
+        style={{
+          padding: '10px 20px',
+          marginRight: '10px',
+          background: '#252a31',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer',
+          marginTop: "10px"
+        }}
+      >
+        Save Template
+      </Button>
+
+
+      {designsLoadings ? (
         <div style={{ padding: '30px' }}>
           <Spinner />
         </div>
+      ) : (
+        <div
+          style={{
+            display: 'flex',
+            paddingTop: '5px',
+            height: '100%',
+            overflow: 'auto',
+          }}
+        >
+
+          <ImagesGrid
+            images={designs}
+            getPreview={(image) => image.previewImage}
+            onSelect={async (item) => {
+              await fetchTemplateJson(item.canvaMyDesignsID);
+            }}
+            rowsNumber={2}
+            isLoading={!designs.length}
+            loadMore={false}
+          />
+
+        </div>
       )}
-      <div
-        style={{
-          display: 'flex',
-          paddingTop: '5px',
-          height: '100%',
-          overflow: 'auto',
-        }}
-      >
-        <div style={{ width: '50%' }}>
-          {half1.map((design) => (
-            <DesignCard
-              design={design}
-              key={design.id}
-              store={store}
-              onDelete={handleProjectDelete}
-            />
-          ))}
-        </div>
-        <div style={{ width: '50%' }}>
-          {half2.map((design) => (
-            <DesignCard
-              design={design}
-              key={design.id}
-              store={store}
-              onDelete={handleProjectDelete}
-            />
-          ))}
-        </div>
-      </div>
     </div>
   );
 });

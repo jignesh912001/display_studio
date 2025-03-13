@@ -59,6 +59,35 @@ export async function saveAssetsAction(formData) {
     return response
 }
 
+export async function saveMyTemplateAction(item) {
+    try {
+        const response = await axios.post(`${url}CanvaMaster/SaveCanvaMyDesigns`, item, { headers: { Authorization: token } });
+        return response;
+    } catch (error) {
+        console.error("Error saving template saveMyTemplateAction :", error);
+        throw error;
+    }
+}
+
+export async function getMyTemplateAction(item) {
+    try {
+        const response = await axios.get(`${url}CanvaMaster/GetPreviewImagesofCanva`, { headers: { Authorization: token } });
+        return response;
+    } catch (error) {
+        console.error("Error saving template getMyTemplateAction :", error);
+        throw error;
+    }
+}
+
+export async function fetchTemplateJsonMyDesign(item) {
+    try {
+        const response = await axios.post(`${url}CanvaMaster/GetTemplateJsonOfCanva`, item, { headers: { Authorization: token } });
+        return response;
+    } catch (error) {
+        console.error("Error saving template getMyTemplateAction :", error);
+        throw error;
+    }
+}
 
 export async function saveDesign({ storeJSON, preview, name, id }) {
     console.log('saving');
@@ -114,13 +143,13 @@ const readKv = withTimeout(async function readKv(key) {
 
 const readFile = withTimeout(async function readFile(fileName) {
     if (isSignedIn()) {
-      return await window.puter.fs.read(fileName);
+        return await window.puter.fs.read(fileName);
     }
     return await localStorage.getItem(fileName);
-  }, 'readFile');
+}, 'readFile');
 
 export const getPreview = async ({ id }) => {
     const preview = await readFile(`designs/${id}.jpg`);
     return URL.createObjectURL(preview);
-  };
+};
 

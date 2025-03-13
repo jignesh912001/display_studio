@@ -15,6 +15,9 @@ export const UserMenu = observer(({ store }) => {
       });
     }
   }, [project.cloudEnabled]);
+
+
+
   return (
     <>
       <Popover
@@ -23,34 +26,7 @@ export const UserMenu = observer(({ store }) => {
             {project.cloudEnabled && (
               <div style={{ padding: '5px' }}>Logged as {user?.username}</div>
             )}
-            {!project.cloudEnabled && (
-              <MenuItem
-                text="Login"
-                icon={<LogIn />}
-                onClick={() => {
-                  project.signIn();
-                }}
-              />
-            )}
-            {/* {project.cloudEnabled && (
-              <MenuItem
-                text="Subscription"
-                icon={'thumbs-up'}
-                onClick={() => {
-                  // toggleSubModal(true);
-                }}
-              />
-            )} */}
-            {project.cloudEnabled && (
-              <MenuItem
-                text="Logout"
-                icon={<LogOut />}
-                onClick={() => {
-                  window.puter.auth.signOut();
-                  // logout({ returnTo: window.location.origin, localOnly: true });
-                }}
-              />
-            )}
+
           </Menu>
         }
         position={Position.BOTTOM_RIGHT}
