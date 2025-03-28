@@ -5,7 +5,7 @@ import { Spinner } from '@blueprintjs/core';
 import { PolotnoContainer, SidePanelWrap, WorkspaceWrap } from 'polotno';
 import { Toolbar } from 'polotno/toolbar/toolbar';
 import { ZoomButtons } from 'polotno/toolbar/zoom-buttons';
-import { ElementsSection, SidePanel, SizeSection, TextSection, BackgroundSection } from 'polotno/side-panel';
+import { ElementsSection, SidePanel, SizeSection, TextSection, BackgroundSection , PhotosSection} from 'polotno/side-panel';
 import { Workspace } from 'polotno/canvas/workspace';
 import { PagesTimeline } from 'polotno/pages-timeline';
 import { setTranslations } from 'polotno/config';
@@ -112,7 +112,7 @@ const App = observer(({ store }) => {
     }
   };
 
-  const sections = [MyDesignsSection, AsstesImage, VideoSection, UploadPanel, TemplatesSection, TextSection, ElementsSection, SizeSection, BackgroundSection]
+  const sections = [MyDesignsSection, UploadPanel, TemplatesSection, TextSection, PhotosSection,ElementsSection, SizeSection, BackgroundSection]
 
   return (
     <div

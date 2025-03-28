@@ -19,14 +19,15 @@ const UploadPanel = {
 
     const [images, setImages] = useState([]);
     const [isUploading, setUploading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
 
     const loadImage = async () => {
       const response = await getAssetsAction({ assetsType: "CanvaUploadImage" })
-      console.log('response', response)
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // await new Promise((resolve) => setTimeout(resolve, 3000));
       const data = response.data.data;
       setImages(data);
+      setIsLoading(false)
     };
 
     const handleFileInput = async (e) => {
@@ -63,7 +64,7 @@ const UploadPanel = {
                 onClick={() => { document.querySelector('#input-file')?.click() }}
                 loading={isUploading}
               >
-                Upload Image ( Add File )
+                Upload Files (.jpg, .jpeg, .png, .mp4, .mov )
               </Button>
 
               <input
@@ -72,14 +73,38 @@ const UploadPanel = {
                 style={{ display: 'none' }}
                 onChange={handleFileInput}
                 multiple
+                accept=".jpg, .jpeg, .png, .mp4, .mov"
               />
             </label>
 
-            <div style={{ height: '920px', display: 'flex', flexDirection: 'column' }}>
+            <input
+              type="text"
+              placeholder="Search..."
+              // value={searchQuery}
+              // onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                background: "#1114184d",
+                border: "none",
+                boxShadow:"0 0 0 0 #8ABBFF00, 0 0 0 0 #8ABBFF00,inset 0 0 0 1px #FFFFFF33,inset 0 -1px 1px 0 #FFFFFF4D",
+                color: "#f6f7f9",
+                fontSize: "14px",
+                height: "30px",
+                borderRadius: "30px",
+                appearance: "none",
+                outline: "none",
+                padding: "0 10px 0 10px",
+                width: "100%",
+                marginBottom: "10px",
+                marginTop: "10px",
+              }}
+            />
+
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
               <ImagesGrid
                 images={images}
                 getPreview={(image) => image.assetFolderPath}
+                isLoading={isLoading}
                 onSelect={async (image, pos) => {
                   const { width, height } = await getImageSize(image.assetFolderPath);
                   store.activePage.addElement({
