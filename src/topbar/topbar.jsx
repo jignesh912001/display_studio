@@ -52,6 +52,7 @@ export default observer(({ store }) => {
   const [progress, setProgress] = useState(0);
   const [saving, setSaving] = useState(false);
   const [designsLoadings, setDesignsLoading] = useState(false);
+  const [preview, setPreview] = useState(null);
 
   const dataURLToBlob = (dataURL) => {
     const parts = dataURL.split(',');
@@ -171,11 +172,17 @@ export default observer(({ store }) => {
 
   const getBtn = localStorage.getItem("isSaveTemplate")
 
+  const preparePreview = async () => {
+    const previewImage = await store.toDataURL();
+    setPreview(previewImage);
+    setDialogOpen(true);
+  };
+  
   return (
     <NavbarContainer className="bp5-navbar">
       <NavInner>
         <Navbar.Group align={Alignment.RIGHT}>
-          <Button onClick={() => setDialogOpen(true)}>Download</Button>
+          <Button onClick={preparePreview}>Download</Button>
           {/* <Button
             disabled={!getBtn}
             onClick={saveTemplate}
@@ -192,8 +199,6 @@ export default observer(({ store }) => {
           >
             Save Template
           </Button> */}
-
-
           <SaveFileDialog
             isDialogOpen={isDialogOpen}
             setDialogOpen={setDialogOpen}
@@ -202,6 +207,7 @@ export default observer(({ store }) => {
             loading={loading}
             progress={progress}
             saving={saving}
+            preview={preview}
             downloadVideo={downloadVideo}
             saveAssetsImage={saveAssetsImage}
           />
