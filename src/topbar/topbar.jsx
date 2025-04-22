@@ -83,6 +83,11 @@ export default observer(({ store }) => {
       link.href = image;
       link.download = `${fileName}.png`;
       link.click();
+
+      setTimeout(() => {
+        window.close();
+      }, 300); // Wait briefly before closing  // Close current window
+
       setSaving(false);
     } catch (error) {
       console.error('Error exporting image:', error);
@@ -157,6 +162,11 @@ export default observer(({ store }) => {
     a.click();
     setProgress(0);
     setLoading(false)
+
+    setTimeout(() => {
+      window.close();
+    }, 300); // Wait briefly before closing  // Close current windowF
+
   };
 
   // Function to save current design as JSON

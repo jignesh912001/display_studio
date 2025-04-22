@@ -148,7 +148,7 @@ export const DownloadButton = observer(({ store }) => {
 
       const renderData = await response.json();
       const renderId = renderData.id;
-      
+
       if (!renderData.id) {
         throw new Error('Invalid response, check API logs');
       }
@@ -207,6 +207,12 @@ export const DownloadButton = observer(({ store }) => {
     a.href = blobUrl;
     a.download = filename;
     a.click();
+    // Focus and close windows
+    if (window.opener) {
+      window.opener.focus();  // Focus the parent window
+    }
+    window.close();  // Close current window
+
   };
 
 

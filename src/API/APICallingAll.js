@@ -2,7 +2,7 @@ import axios from "axios";
 import { nanoid } from "nanoid";
 
 const url = 'https://back.disploy.com/api/';
-const token = 'Bearer eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiIxMjUiLCJ1bmlxdWVfbmFtZSI6ImhldGFsLnByYWphcGF0aUB0aGVkZXN0aW55c29sdXRpb25zLmNvbSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL3N5c3RlbSI6IkluZGlhIFN0YW5kYXJkIFRpbWUiLCJuYmYiOjE3MzYyMjcwMjYsImV4cCI6MTczNjQ4NjIyNiwiaWF0IjoxNzM2MjI3MDI2fQ.1hm_bIk4Mc9haAWPIqf_CcOdWJrLp99JttSn_eiSDdC_HM08xKnvdU7rdHFFCnmHPiJEcqzzaPTPNxX1UgDOow';
+const token = localStorage.getItem('disploy_studio_token');
 
 const isSignedIn = () => {
     return window.puter?.auth?.isSignedIn();
@@ -153,3 +153,15 @@ export const getPreview = async ({ id }) => {
     return URL.createObjectURL(preview);
 };
 
+
+
+export const handleGetUserWithTokenDetails = async (id) => {
+    console.log('token id ==== >', id)
+    let TimeZone = new Date().toLocaleDateString(undefined, { day: "2-digit", timeZoneName: "long", }).substring(4);
+    const response = await axios.get(`${url}Register/SelectProjectByIDWithToken/?ID=${id}&TimeZone=${TimeZone}`);
+    if (response.data.data.data.token) {
+        localStorage.setItem('disploy_studio_token', response.data.data.data.token)
+        window.location.href = "/";
+    }
+    return response;
+}

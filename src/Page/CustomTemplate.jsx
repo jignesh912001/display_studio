@@ -11,6 +11,8 @@ export const TemplatesPanel = observer(({ store }) => {
   const [data, setData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState('');
+
 
   useEffect(() => {
     setIsLoading(true);
@@ -31,18 +33,31 @@ export const TemplatesPanel = observer(({ store }) => {
           setIsLoading(false);
         }
       } else {
-          const respons = await getMyTemplateAction();
-          const data = respons?.data?.data;
-          if (respons.status === 200) {
-            setData(data);
-            setIsLoading(false);
-          }
+        const respons = await getMyTemplateAction();
+        const data = respons?.data?.data;
+        if (respons.status === 200) {
+          setData(data);
+          setIsLoading(false);
+        }
       }
     };
 
     fetchTemplates();
   }, [activeTab]);
 
+  const handleSearch = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+    if (!query) {
+      setFilteredImages(images);
+    } else {
+      const filtered = data.filter( 
+        (image) => image.assetName?.toLowerCase().includes(query) // 🔥 Search inside `name`
+      );
+      // setFilteredImages(filtered);
+    }
+  };
+  console.log('data', data)
   return (
     <div style={{ height: "calc(100% - 100px)" }}>
       <div style={{ display: "flex", marginBottom: "10px" }}>
@@ -62,8 +77,8 @@ export const TemplatesPanel = observer(({ store }) => {
       <input
         type="text"
         placeholder="Search..."
-        // value={searchQuery}
-        // onChange={(e) => setSearchQuery(e.target.value)}
+        value={searchQuery}
+        onChange={handleSearch}
         style={{
           background: "#1114184d",
           border: "none",
@@ -80,6 +95,7 @@ export const TemplatesPanel = observer(({ store }) => {
           marginBottom: "20px",
         }}
       />
+
       <ImagesGrid
         shadowEnabled={false}
         images={data}

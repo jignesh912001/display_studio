@@ -5,7 +5,7 @@ import { Spinner } from '@blueprintjs/core';
 import { PolotnoContainer, SidePanelWrap, WorkspaceWrap } from 'polotno';
 import { Toolbar } from 'polotno/toolbar/toolbar';
 import { ZoomButtons } from 'polotno/toolbar/zoom-buttons';
-import { ElementsSection, SidePanel, SizeSection, TextSection, BackgroundSection , PhotosSection} from 'polotno/side-panel';
+import { ElementsSection, SidePanel, SizeSection, TextSection, BackgroundSection, PhotosSection } from 'polotno/side-panel';
 import { Workspace } from 'polotno/canvas/workspace';
 import { PagesTimeline } from 'polotno/pages-timeline';
 import { setTranslations } from 'polotno/config';
@@ -27,6 +27,7 @@ import { useProject } from './project';
 import en from './translations/en';
 
 import Topbar from './topbar/topbar';
+import { handleGetUserWithTokenDetails } from './API/APICallingAll';
 
 setTranslations(en);
 
@@ -76,6 +77,8 @@ const useHeight = () => {
 const App = observer(({ store }) => {
   const project = useProject();
   const height = useHeight();
+  const pathSegments = window.location.pathname.split('/');
+  const TokenId = pathSegments[pathSegments.length - 1]; 
 
   React.useEffect(() => {
     if (project.language.startsWith('fr')) {
@@ -97,6 +100,17 @@ const App = observer(({ store }) => {
     project.firstLoad();
   }, []);
 
+  const fechToken = async () => {
+    if (TokenId) {
+      const id = atob(TokenId)
+      await handleGetUserWithTokenDetails(id)
+    }
+  }
+
+  React.useEffect(() => {
+    fechToken()
+  }, []);
+
   const handleDrop = (ev) => {
     // Prevent default behavior (Prevent file from being opened)
     ev.preventDefault();
@@ -112,16 +126,11 @@ const App = observer(({ store }) => {
     }
   };
 
-  const sections = [MyDesignsSection, UploadPanel, TemplatesSection, TextSection, PhotosSection,ElementsSection, SizeSection, BackgroundSection]
+  const sections = [MyDesignsSection, UploadPanel, TemplatesSection, TextSection, PhotosSection, ElementsSection, SizeSection, BackgroundSection]
 
   return (
     <div
-      style={{
-        width: '100vw',
-        height: height + 'px',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
+      style={{ width: '100vw', height: height + 'px', display: 'flex', flexDirection: 'column' }}
       onDrop={handleDrop}
     >
       <Topbar store={store} />
@@ -134,7 +143,7 @@ const App = observer(({ store }) => {
             <Toolbar store={store} />
             <Workspace store={store} />
             <ZoomButtons store={store} />
-            <PagesTimeline store={store} />
+            {/* <PagesTimeline store={store} /> */}
           </WorkspaceWrap>
         </PolotnoContainer>
       </div>
