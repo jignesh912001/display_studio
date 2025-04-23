@@ -77,8 +77,11 @@ const useHeight = () => {
 const App = observer(({ store }) => {
   const project = useProject();
   const height = useHeight();
-  const pathSegments = window.location.pathname.split('/');
-  const TokenId = pathSegments[pathSegments.length - 1]; 
+  const url = window.location.href;
+  // const pathSegments = window.location.pathname.split('/');
+  const params = new URLSearchParams(new URL(url).search);
+  const TokenId = params.get('ID');
+  // const TokenId = pathSegments[pathSegments.length - 1]; 
 
   React.useEffect(() => {
     if (project.language.startsWith('fr')) {
