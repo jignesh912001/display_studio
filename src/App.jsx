@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Spinner } from '@blueprintjs/core';
 
@@ -28,6 +28,7 @@ import en from './translations/en';
 
 import Topbar from './topbar/topbar';
 import { handleGetUserWithTokenDetails } from './API/APICallingAll';
+import Loading from './Common/Loading';
 
 setTranslations(en);
 
@@ -81,7 +82,15 @@ const App = observer(({ store }) => {
   // const pathSegments = window.location.pathname.split('/');
   const params = new URLSearchParams(new URL(url).search);
   const TokenId = params.get('ID');
+  const token = sessionStorage.getItem('disploy_studio_token');
+  const [loading, setLoading] = useState(TokenId && !token ? true : false);
   // const TokenId = pathSegments[pathSegments.length - 1]; 
+
+  useEffect(() => {
+    if (!TokenId && !token) {
+      window.location.href = "https://web.disploy.com/";
+    }
+  }, [TokenId, token])
 
   React.useEffect(() => {
     if (project.language.startsWith('fr')) {
@@ -106,13 +115,20 @@ const App = observer(({ store }) => {
   const fechToken = async () => {
     if (TokenId) {
       const id = atob(TokenId)
-      await handleGetUserWithTokenDetails(id)
+      const res = await handleGetUserWithTokenDetails(id);
+      if (res?.status === 200) {
+        sessionStorage.setItem('disploy_studio_token', res.data.data.data.token)
+        window.location.href = "https://www.disploy.com/studio/";
+        setLoading(false)
+      }
     }
   }
 
   React.useEffect(() => {
-    fechToken()
-  }, []);
+    if (loading) {
+      fechToken()
+    }
+  }, [loading]);
 
   const handleDrop = (ev) => {
     // Prevent default behavior (Prevent file from being opened)
@@ -132,50 +148,57 @@ const App = observer(({ store }) => {
   const sections = [MyDesignsSection, UploadPanel, TemplatesSection, TextSection, PhotosSection, ElementsSection, SizeSection, BackgroundSection]
 
   return (
-    <div
-      style={{ width: '100vw', height: height + 'px', display: 'flex', flexDirection: 'column' }}
-      onDrop={handleDrop}
-    >
-      <Topbar store={store} />
-      <div style={{ height: 'calc(100% - 50px)' }}>
-        <PolotnoContainer>
-          <SidePanelWrap>
-            <SidePanel store={store} sections={sections} />
-          </SidePanelWrap>
-          <WorkspaceWrap>
-            <Toolbar store={store} />
-            <Workspace store={store} />
-            <ZoomButtons store={store} />
-            {/* <PagesTimeline store={store} /> */}
-          </WorkspaceWrap>
-        </PolotnoContainer>
-      </div>
-      {project.status === 'loading' && (
+    <>
+      {loading && (
+        <Loading />
+      )}
+      {!loading && (
         <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 1000,
-          }}
+          style={{ width: '100vw', height: height + 'px', display: 'flex', flexDirection: 'column' }}
+          onDrop={handleDrop}
         >
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              color: 'white',
-            }}
-          >
-            <Spinner />
+          <Topbar store={store} />
+          <div style={{ height: 'calc(100% - 50px)' }}>
+            <PolotnoContainer>
+              <SidePanelWrap>
+                <SidePanel store={store} sections={sections} />
+              </SidePanelWrap>
+              <WorkspaceWrap>
+                <Toolbar store={store} />
+                <Workspace store={store} />
+                <ZoomButtons store={store} />
+                {/* <PagesTimeline store={store} /> */}
+              </WorkspaceWrap>
+            </PolotnoContainer>
           </div>
+          {project.status === 'loading' && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                zIndex: 1000,
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  color: 'white',
+                }}
+              >
+                <Spinner />
+              </div>
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </>
   );
 });
 

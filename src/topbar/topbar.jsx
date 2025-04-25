@@ -85,6 +85,7 @@ export default observer(({ store }) => {
       link.click();
 
       setTimeout(() => {
+        sessionStorage.setItem("disploy_studio_token", "");
         window.close();
       }, 300); // Wait briefly before closing  // Close current window
 
@@ -164,6 +165,7 @@ export default observer(({ store }) => {
     setLoading(false)
 
     setTimeout(() => {
+      sessionStorage.setItem("disploy_studio_token", "");
       window.close();
     }, 300); // Wait briefly before closing  // Close current windowF
 
@@ -180,7 +182,7 @@ export default observer(({ store }) => {
     saveMyTemplateAction(payload)
   };
 
-  const getBtn = localStorage.getItem("isSaveTemplate")
+  const getBtn = sessionStorage.getItem("isSaveTemplate")
 
   const preparePreview = async () => {
     const previewImage = await store.toDataURL();

@@ -21,7 +21,7 @@ let storage = localforage;
 if (
   !localforage.supports(localforage.INDEXEDDB) &&
   !localforage.supports(localforage.WEBSQL) &&
-  !localforage.supports(localforage.LOCALSTORAGE)
+  !localforage.supports(localforage.sessionStorage)
 ) {
   storage = inMemoryStorage;
 }

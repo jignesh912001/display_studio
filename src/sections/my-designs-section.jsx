@@ -13,7 +13,7 @@ import LoadingBar from "react-top-loading-bar";
 
 export const MyDesignsPanel = observer(({ store }) => {
   const project = useProject();
-  const [designsLoadings, setDesignsLoading] = React.useState(false);
+  const [designsLoadings, setDesignsLoading] = React.useState(true);
   const [designs, setDesigns] = React.useState([]);
   const progressRef = useRef(null); // Ref for progress bar
 
@@ -56,6 +56,12 @@ export const MyDesignsPanel = observer(({ store }) => {
       const payload = {
         previewImage: Preview,
         templateJson: JSON.stringify(json),
+        "file": {
+          "fileType": "Template",
+          "filePath": Preview,
+          "fileName": `Template-${designs?.length + 1}.png`,
+          "isChange": true
+        }
       };
       await saveMyTemplateAction(payload);
       loadDesigns();
@@ -85,7 +91,7 @@ export const MyDesignsPanel = observer(({ store }) => {
           intent="primary"
           onClick={async () => {
             await project.createNewDesign();
-            localStorage.setItem("isSaveTemplate", true);
+            sessionStorage.setItem("isSaveTemplate", true);
           }}
         >
           Create new design
@@ -104,7 +110,9 @@ export const MyDesignsPanel = observer(({ store }) => {
         </Button>
       </div>
 
-      {designsLoadings ? (
+      {!designsLoadings && designs?.length === 0 ? (
+        <div style={{ padding: '30px', display: "flex", alignItems: "center", justifyContent: "center" }}>No results</div>
+      ) : designsLoadings ? (
         <div style={{ padding: "30px" }}>
           <Spinner />
         </div>

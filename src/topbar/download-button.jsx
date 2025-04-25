@@ -211,6 +211,7 @@ export const DownloadButton = observer(({ store }) => {
     if (window.opener) {
       window.opener.focus();  // Focus the parent window
     }
+    sessionStorage.setItem("disploy_studio_token", "");
     window.close();  // Close current window
 
   };

@@ -1,8 +1,9 @@
 import axios from "axios";
 import { nanoid } from "nanoid";
 
-const url = 'https://back.disploy.com/api/';
-const token = localStorage.getItem('disploy_studio_token');
+// const url = 'https://back.disploy.com/api/';
+const url = "https://disploystage.disploy.com/api/";
+const token = sessionStorage.getItem('disploy_studio_token');
 
 const isSignedIn = () => {
     return window.puter?.auth?.isSignedIn();
@@ -117,7 +118,7 @@ const writeFile = withTimeout(async function writeFile(fileName, data) {
     if (isSignedIn()) {
         await window.puter.fs.write(fileName, data, { createMissingParents: true });
     } else {
-        await localStorage.setItem(fileName, data);
+        await sessionStorage.setItem(fileName, data);
     }
 }, 'writeFile');
 
@@ -129,7 +130,7 @@ const writeKv = withTimeout(async function writeKv(key, value) {
     if (isSignedIn()) {
         return await window.puter.kv.set(key, value);
     } else {
-        return await localStorage.setItem(key, value);
+        return await sessionStorage.setItem(key, value);
     }
 }, 'writeKv');
 
@@ -137,7 +138,7 @@ const readKv = withTimeout(async function readKv(key) {
     if (isSignedIn()) {
         return await window.puter.kv.get(key);
     } else {
-        return await localStorage.getItem(key);
+        return await sessionStorage.getItem(key);
     }
 }, 'readKv');
 
@@ -145,7 +146,7 @@ const readFile = withTimeout(async function readFile(fileName) {
     if (isSignedIn()) {
         return await window.puter.fs.read(fileName);
     }
-    return await localStorage.getItem(fileName);
+    return await sessionStorage.getItem(fileName);
 }, 'readFile');
 
 export const getPreview = async ({ id }) => {
@@ -159,9 +160,9 @@ export const handleGetUserWithTokenDetails = async (id) => {
     console.log('token id ==== >', id)
     let TimeZone = new Date().toLocaleDateString(undefined, { day: "2-digit", timeZoneName: "long", }).substring(4);
     const response = await axios.get(`${url}Register/SelectProjectByIDWithToken/?ID=${id}&TimeZone=${TimeZone}`);
-    if (response.data.data.data.token) {
-        localStorage.setItem('disploy_studio_token', response.data.data.data.token)
-        window.location.href = "/";
-    }
+    // if (response.data.data.data.token) {
+    //     sessionStorage.setItem('disploy_studio_token', response.data.data.data.token)
+    //     window.location.href = "https://www.disploy.com/studio/";
+    // }
     return response;
 }

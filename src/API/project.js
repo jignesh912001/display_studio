@@ -10,7 +10,7 @@ export const useProject = () => useContext(ProjectContext);
 
 const getFromStorage = (key) => {
   try {
-    return localStorage.getItem(key);
+    return sessionStorage.getItem(key);
   } catch (e) {
     return null;
   }
@@ -18,7 +18,7 @@ const getFromStorage = (key) => {
 
 const setToStorage = (key, value) => {
   try {
-    localStorage.setItem(key, value);
+    sessionStorage.setItem(key, value);
   } catch (e) {}
 };
 

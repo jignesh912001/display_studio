@@ -1,6 +1,6 @@
 import React from 'react';
 
-// I know, it is unsafe to use localStorage
+// I know, it is unsafe to use sessionStorage
 // but I don't want to add any backend for this right now
 // and I don't want to use cookies
 // so it is just a simple hack
@@ -9,7 +9,7 @@ import React from 'react';
 // most of the text above wrote copilot
 const loadCredits = (key, maxUsage) => {
   try {
-    const data = JSON.parse(localStorage.getItem(key) || '{}');
+    const data = JSON.parse(sessionStorage.getItem(key) || '{}');
     if (data.date !== new Date().toDateString()) {
       return maxUsage;
     }
@@ -19,7 +19,7 @@ const loadCredits = (key, maxUsage) => {
 };
 
 const saveCredits = (key, credits) => {
-  localStorage.setItem(
+  sessionStorage.setItem(
     key,
     JSON.stringify({
       date: new Date().toDateString(),
