@@ -162,6 +162,7 @@ export const MyDesignsPanel = observer(({ store }) => {
             getPreview={(image) => image.previewImage}
             onSelect={async (item) => {
               await fetchTemplateJson(item.canvaMyDesignsID);
+              sessionStorage.setItem("isSaveTemplate", true);
             }}
             rowsNumber={2}
             isLoading={!designs.length}

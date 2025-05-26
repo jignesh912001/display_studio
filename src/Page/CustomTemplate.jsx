@@ -111,6 +111,7 @@ export const TemplatesPanel = observer(({ store }) => {
             json.pages.forEach((page) => {
               page.children.forEach((element) => {
                 currentPage.addElement(element);
+                sessionStorage.setItem("isSaveTemplate", true);
               });
             });
           }

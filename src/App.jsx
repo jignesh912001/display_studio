@@ -80,7 +80,7 @@ const App = observer(({ store }) => {
   useEffect(() => {
     if (!TokenId && !token) {
       // window.location.href = "https://web.disploy.com/";
-      // window.location.href = "https://web.qbisinc.com/";
+      // window.location.href = "https://web.qbisinc.com/";  // uncommit and live
     }
   }, [TokenId, token])
 

@@ -52,6 +52,7 @@ const AsstesImage = {
                             x: pos ? pos.x : store.width / 2 - width / 2,
                             y: pos ? pos.y : store.height / 2 - height / 2,
                         });
+                        sessionStorage.setItem("isSaveTemplate", true);
                     }}
                     rowsNumber={2}
                     isLoading={!images.length}
