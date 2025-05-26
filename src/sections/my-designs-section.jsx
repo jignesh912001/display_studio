@@ -10,11 +10,13 @@ import {
   saveMyTemplateAction,
 } from "../API/APICallingAll";
 import LoadingBar from "react-top-loading-bar";
+import SaveAlert from "../Page/AlertDialog";
 
 export const MyDesignsPanel = observer(({ store }) => {
   const project = useProject();
   const [designsLoadings, setDesignsLoading] = React.useState(true);
   const [designs, setDesigns] = React.useState([]);
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false); // Dialog control
   const progressRef = useRef(null); // Ref for progress bar
 
   const loadDesigns = async () => {
@@ -47,6 +49,36 @@ export const MyDesignsPanel = observer(({ store }) => {
     }
   };
 
+  const handleCreateNewDesign = async () => {
+    const isSaveRequired = sessionStorage.getItem("isSaveTemplate") == "true";
+    if (isSaveRequired) {
+      setIsDialogOpen(true);
+    } else {
+      await project.createNewDesign();
+      setIsDialogOpen(false);
+    }
+  };
+
+  const handleDialogYes = async () => {
+    setIsDialogOpen(false);
+    await saveTemplate();
+    await project.createNewDesign();
+    sessionStorage.setItem("isSaveTemplate", false);
+  };
+
+  const handleDialogNo = async () => {
+    setIsDialogOpen(false);
+  };
+
+  // Clear session and close dialog
+  const handleClearSession = async () => {
+    localStorage.clear()
+    sessionStorage.clear(); // Clear all sessionStorage
+    await project.createNewDesign();
+    setIsDialogOpen(false);
+  };
+
+
   // Function to save current design as JSON
   const saveTemplate = async () => {
     try {
@@ -65,7 +97,9 @@ export const MyDesignsPanel = observer(({ store }) => {
       };
       await saveMyTemplateAction(payload);
       loadDesigns();
+      sessionStorage.setItem("isSaveTemplate", false);
       progressRef.current.complete(); // Hide progress bar on success
+      sessionStorage.removeItem()
     } catch (error) {
       console.error("Error fetching template JSON saveTemplate :", error);
       progressRef.current.staticStart(); // Keep progress bar visible on error
@@ -89,10 +123,7 @@ export const MyDesignsPanel = observer(({ store }) => {
           fill
           style={{ flex: "1" }}
           intent="primary"
-          onClick={async () => {
-            await project.createNewDesign();
-            sessionStorage.setItem("isSaveTemplate", true);
-          }}
+          onClick={handleCreateNewDesign}
         >
           Create new design
         </Button>
@@ -137,9 +168,21 @@ export const MyDesignsPanel = observer(({ store }) => {
           />
         </div>
       )}
+
+
+      <SaveAlert
+        isDialogOpen={isDialogOpen}
+        setIsDialogOpen={setIsDialogOpen}
+        handleDialogNo={handleDialogNo}
+        handleDialogYes={handleDialogYes}
+        handleClearSession={handleClearSession}
+      />
+
+
     </div>
   );
 });
+
 
 // define the new custom section
 export const MyDesignsSection = {

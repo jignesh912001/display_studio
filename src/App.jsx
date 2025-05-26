@@ -7,20 +7,11 @@ import { Toolbar } from 'polotno/toolbar/toolbar';
 import { ZoomButtons } from 'polotno/toolbar/zoom-buttons';
 import { ElementsSection, SidePanel, SizeSection, TextSection, BackgroundSection, PhotosSection } from 'polotno/side-panel';
 import { Workspace } from 'polotno/canvas/workspace';
-import { PagesTimeline } from 'polotno/pages-timeline';
 import { setTranslations } from 'polotno/config';
 
 import { loadFile } from './file';
-
-import { QrSection } from './sections/qr-section';
-import { QuotesSection } from './sections/quotes-section';
-import { IconsSection } from './sections/icons-section';
-import { StableDiffusionSection } from './sections/stable-diffusion-section';
-
 import { MyDesignsSection } from './sections/my-designs-section';
-import VideoSection from './Page/VideoSection';
 import UploadPanel from './Page/UploadPanel';
-import AsstesImage from './Page/AsstesImage';
 import { TemplatesSection } from './Page/CustomTemplate';
 
 import { useProject } from './project';
@@ -89,7 +80,7 @@ const App = observer(({ store }) => {
   useEffect(() => {
     if (!TokenId && !token) {
       // window.location.href = "https://web.disploy.com/";
-      window.location.href = "https://web.qbisinc.com/";
+      // window.location.href = "https://web.qbisinc.com/";
     }
   }, [TokenId, token])
 
@@ -107,6 +98,7 @@ const App = observer(({ store }) => {
     } else {
       setTranslations(en, { validate: true });
     }
+
   }, [project.language]);
 
   React.useEffect(() => {
@@ -145,6 +137,21 @@ const App = observer(({ store }) => {
       loadFile(ev.dataTransfer.files[i], store);
     }
   };
+
+  // Track store changes to update localStorage with isChanging flag
+  useEffect(() => {
+    if (!store) return;
+    const setIsChangingTrue = () => {
+      sessionStorage.setItem("isSaveTemplate", true);
+    };
+    // Listen to any changes in the store
+    const unsub = store.on('change', setIsChangingTrue);
+
+    // Clean up on unmount
+    return () => {
+      unsub();
+    };
+  }, [store]);
 
   const sections = [MyDesignsSection, UploadPanel, TemplatesSection, TextSection, PhotosSection, ElementsSection, SizeSection, BackgroundSection]
 

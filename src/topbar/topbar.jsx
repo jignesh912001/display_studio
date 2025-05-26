@@ -182,7 +182,6 @@ export default observer(({ store }) => {
     saveMyTemplateAction(payload)
   };
 
-  const getBtn = sessionStorage.getItem("isSaveTemplate")
 
   const preparePreview = async () => {
     const previewImage = await store.toDataURL();
