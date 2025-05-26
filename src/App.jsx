@@ -139,19 +139,19 @@ const App = observer(({ store }) => {
   };
 
   // Track store changes to update localStorage with isChanging flag
-  useEffect(() => {
-    if (!store) return;
-    const setIsChangingTrue = () => {
-      sessionStorage.setItem("isSaveTemplate", true);
-    };
-    // Listen to any changes in the store
-    const unsub = store.on('change', setIsChangingTrue);
+  // useEffect(() => {
+  //   if (!store) return;
+  //   const setIsChangingTrue = () => {
+  //     sessionStorage.setItem("isSaveTemplate", true);
+  //   };
+  //   // Listen to any changes in the store
+  //   const unsub = store.on('change', setIsChangingTrue);
 
-    // Clean up on unmount
-    return () => {
-      unsub();
-    };
-  }, [store]);
+  //   // Clean up on unmount
+  //   return () => {
+  //     unsub();
+  //   };
+  // }, [store]);
 
   const sections = [MyDesignsSection, UploadPanel, TemplatesSection, TextSection, PhotosSection, ElementsSection, SizeSection, BackgroundSection]
 
