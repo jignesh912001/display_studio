@@ -57,7 +57,6 @@ export const TemplatesPanel = observer(({ store }) => {
       // setFilteredImages(filtered);
     }
   };
-  console.log('data', data)
   return (
     <div style={{ height: "calc(100% - 100px)" }}>
       <div style={{ display: "flex", marginBottom: "10px" }}>

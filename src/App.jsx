@@ -77,12 +77,12 @@ const App = observer(({ store }) => {
   const [loading, setLoading] = useState(TokenId && !token ? true : false);
   // const TokenId = pathSegments[pathSegments.length - 1]; 
 
-  useEffect(() => {
-    if (!TokenId && !token) {
-      // window.location.href = "https://web.disploy.com/";
-      // window.location.href = "https://web.qbisinc.com/";  // uncommit and live
-    }
-  }, [TokenId, token])
+  // useEffect(() => {
+  //   if (!TokenId && !token) {
+  //     // window.location.href = "https://web.disploy.com/";
+  //     window.location.href = "https://web.qbisinc.com/";
+  //   }
+  // }, [TokenId, token])
 
   React.useEffect(() => {
     if (project.language.startsWith('fr')) {
@@ -111,7 +111,7 @@ const App = observer(({ store }) => {
       const res = await handleGetUserWithTokenDetails(id);
       if (res?.status === 200) {
         sessionStorage.setItem('disploy_studio_token', res.data.data.data.token)
-        window.location.href = "https://www.disploy.com/studio/";
+        // window.location.href = "https://www.disploy.com/studio/";
         setLoading(false)
       }
     }

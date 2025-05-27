@@ -10,7 +10,6 @@ const SaveFileDialog = ({ isDialogOpen,
     downloadVideo,
     saveAssetsImage,
     saving,
-    preview 
 }) => {
     return (
         <Dialog
@@ -34,19 +33,6 @@ const SaveFileDialog = ({ isDialogOpen,
                     marginTop: "10px"
                 }}
             >
-                {preview && (
-                    <div style={{ textAlign: "center", marginBottom: "15px" }}>
-                        <img 
-                            src={preview} 
-                            alt="Design Preview" 
-                            style={{ 
-                                maxWidth: "100%", 
-                                borderRadius: "8px", 
-                                boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2)" 
-                            }} 
-                        />
-                    </div>
-                )}
                 <FormGroup
                     label="Enter file name"
                     labelFor="file-name-input"
