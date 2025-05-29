@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
+import {  reaction } from "mobx";
+
 import {
   Navbar,
   Alignment,
@@ -11,11 +13,15 @@ import {
   RadioGroup,
   Radio,
   FormGroup,
+  Checkbox,
+  Menu,
+  MenuItem,
 } from "@blueprintjs/core";
 import styled from "polotno/utils/styled";
-import SaveFileDialog from "../Page/DialogSaveFile";
 import { saveAssetsAction } from "../API/APICallingAll";
 import PreviewDialog from "../Page/DialogPreview";
+
+import { createStore } from "polotno/model/store";
 
 const NavbarContainer = styled("div")`
   white-space: nowrap;
@@ -33,23 +39,26 @@ const NavInner = styled("div")`
 `;
 
 export default observer(({ store }) => {
-  const [selection, setSelection] = useState("all");
-  const [fromPage, setFromPage] = useState("");
-  const [toPage, setToPage] = useState("");
-
   const generateFileName = () => {
     const randomNumber = Math.floor(1000000000 + Math.random() * 9000000000);
     const currentDate = new Date().toISOString().split("T")[0];
     return `disploy-${randomNumber}-${currentDate}`;
   };
 
-  const [isDialogOpen, setDialogOpen] = useState(false);
   const [isPreviewOpen, setPreviwOpen] = useState(false);
   const [fileName, setFileName] = useState(generateFileName());
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState(null);
+
+  const [selectedPages, setSelectedPages] = useState([]);
+  const [isAllSelected, setIsAllSelected] = useState(false);
+  const [pageThumbnails, setPageThumbnails] = useState([]);
+  const [downloadFormat, setDownloadFormat] = useState("png");
+
+  const loadingRef = useRef(false);
+  const thumbnailStoreRef = useRef(createStore());
 
   const dataURLToBlob = (dataURL) => {
     const parts = dataURL.split(",");
@@ -66,26 +75,39 @@ export default observer(({ store }) => {
     const json = await store.toJSON();
     const allPages = json.pages;
 
-    if (selection === "custom") {
-      const from = parseInt(fromPage, 10) - 1;
-      const to = parseInt(toPage, 10);
-      if (
-        isNaN(from) ||
-        isNaN(to) ||
-        from < 0 ||
-        to <= from ||
-        to > allPages.length
-      ) {
-        alert("Please enter a valid page range.");
-        return null;
-      }
-      return allPages.slice(from, to);
+    if (isAllSelected || selectedPages.length === 0) {
+      return allPages;
     }
 
-    return allPages;
+    const selected = selectedPages
+      .map((pageNumber) => allPages[pageNumber - 1])
+      .filter(Boolean);
+
+    return selected;
   };
 
-  const saveAssetsImage = async () => {
+  const convertPngDataUrlToJpgBlob = (pngDataUrl) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(
+          (blob) => {
+            resolve(blob);
+          },
+          "image/jpeg",
+          0.95 // quality 95%
+        );
+      };
+      img.src = pngDataUrl;
+    });
+  };
+
+  const saveAssetsImage = async (format = "png") => {
     setSaving(true);
     try {
       const selectedPages = await getPagesToExport();
@@ -101,10 +123,21 @@ export default observer(({ store }) => {
         await store.loadJSON({ pages: [page] });
         await new Promise((r) => setTimeout(r, 200));
 
+        // Here generate image with pixelRatio 2 and mime type accordingly
         const image = await store.toDataURL({ pixelRatio: 2 });
-        const blob = dataURLToBlob(image);
+
+        // If jpg is selected, convert png dataURL to jpg dataURL before converting blob (optional)
+        // For simplicity, you can keep png for now or add canvas conversion
+
+        let blob;
+        if (format === "jpg") {
+          blob = await convertPngDataUrlToJpgBlob(image);
+        } else {
+          blob = dataURLToBlob(image);
+        }
+
         const formData = new FormData();
-        formData.append("File", blob, "image.png");
+        formData.append("File", blob, `image.${format}`);
         formData.append("Operation", "Insert");
         formData.append("AssetType", "Image");
         formData.append("IsActive", true);
@@ -113,8 +146,8 @@ export default observer(({ store }) => {
         await saveAssetsAction(formData);
 
         const link = document.createElement("a");
-        link.href = image;
-        link.download = `${fileName}-page-${i + 1}.png`;
+        link.href = URL.createObjectURL(blob);
+        link.download = `${fileName}-page-${i + 1}.${format}`;
         link.click();
       }
 
@@ -232,6 +265,99 @@ export default observer(({ store }) => {
     }
   };
 
+  useEffect(() => {
+    const dispose = reaction(
+      () =>
+        store.pages.map((page) => ({
+          id: page.id,
+          width: page.width,
+          height: page.height,
+          elements: page.children
+            ? page.children.map((el) => ({
+                id: el.id,
+                x: el.x,
+                y: el.y,
+                width: el.width,
+                height: el.height,
+                fill: el.fill,
+                stroke: el.stroke,
+                rotation: el.rotation,
+                // add any other property that should trigger update
+              }))
+            : [],
+        })),
+      async () => {
+        if (loadingRef.current) {
+          return;
+        }
+        loadingRef.current = true;
+
+        try {
+          const originalJSON = await store.toJSON();
+          const previews = [];
+
+          for (let i = 0; i < originalJSON.pages.length; i++) {
+            const page = originalJSON.pages[i];
+            await store.loadJSON({ pages: [page] });
+            await new Promise((res) => setTimeout(res, 150));
+            const image = await store.toDataURL({ width: 120, height: 80 });
+            previews.push(image);
+          }
+
+          await store.loadJSON(originalJSON);
+          setPageThumbnails(previews);
+        } catch (err) {
+          console.error("Error generating thumbnails:", err);
+        } finally {
+          loadingRef.current = false;
+        }
+      },
+      { fireImmediately: true }
+    );
+    return () => dispose();
+  }, [store]);
+
+  const totalPages = store.pages.length;
+  const pageRangeLabel = totalPages > 0 ? `All (${1}-${totalPages})` : "All";
+
+  const toggleCurrentPageSelection = (e) => {
+    if (e) e.stopPropagation();
+    const currentPageIndex = store.activePage
+      ? store.pages.findIndex((p) => p.id === store.activePage.id)
+      : 0;
+    const currentPageNum = currentPageIndex + 1;
+
+    if (selectedPages.length === 1 && selectedPages[0] === currentPageNum) {
+      setSelectedPages([]);
+    } else {
+      setSelectedPages([currentPageNum]);
+    }
+    setIsAllSelected(false);
+  };
+
+  const getSelectedPagesLabel = () => {
+    if (isAllSelected) {
+      return `All (${store.pages.length})`;
+    }
+    if (selectedPages.length === 1) {
+      return `Page ${selectedPages[0]}`;
+    }
+    if (selectedPages.length > 1) {
+      return selectedPages
+        .sort((a, b) => a - b)
+        .map((page) => `Page ${page}`)
+        .join(", ");
+    }
+    return "Select Pages";
+  };
+
+  function triggerDownload(pagesToDownload) {
+    if (downloadFormat === "mp4") {
+      downloadVideo(pagesToDownload);
+    } else if (downloadFormat === "png" || downloadFormat === "jpg") {
+      saveAssetsImage(downloadFormat, pagesToDownload);
+    }
+  }
   return (
     <NavbarContainer className="bp5-navbar">
       <style>
@@ -287,59 +413,213 @@ export default observer(({ store }) => {
                   gap: "10px",
                   width: "300px",
                   padding: 10,
+                  paddingBottom: "20px",
                 }}
               >
-                <RadioGroup
-                  onChange={(e) => setSelection(e.target.value)}
-                  selectedValue={selection}
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    flexDirection: "row",
-                    gap: "30px",
-                  }}
+                {/* <DownloadMenu /> */}
+                <FormGroup
+                  label="Select format"
+                  style={{ marginBottom: "0px" }}
                 >
-                  <Radio label="All" value="all" />
-                  <Radio label="Custom" value="custom" />
-                </RadioGroup>
+                  <RadioGroup
+                    inline
+                    selectedValue={downloadFormat}
+                    onChange={(e) => setDownloadFormat(e.currentTarget.value)}
+                  >
+                    <Radio label="MP4 (Video)" value="mp4" />
+                    <Radio label="PNG (Image)" value="png" />
+                    <Radio label="JPG (Image)" value="jpg" />
+                  </RadioGroup>
+                </FormGroup>
+                <Popover
+                  position="bottom"
+                  content={
+                    <Menu
+                      style={{
+                        width: "300px",
+                        maxHeight: "300px",
+                        overflowY: "auto",
+                      }}
+                    >
+                      <MenuItem
+                        text={
+                          <div style={{ padding: "5px" }}>
+                            <Checkbox
+                              label={pageRangeLabel}
+                              style={{ marginBottom: "0px" }}
+                              checked={isAllSelected}
+                              onChange={() => {
+                                if (isAllSelected) {
+                                  setIsAllSelected(false);
+                                  setSelectedPages([]);
+                                } else {
+                                  const pageNumbers = store.pages.map(
+                                    (_, idx) => idx + 1
+                                  );
+                                  setIsAllSelected(true);
+                                  setSelectedPages(pageNumbers);
+                                }
+                              }}
+                            />
+                          </div>
+                        }
+                        shouldDismissPopover={false}
+                      />
+                      <MenuItem
+                        onClick={toggleCurrentPageSelection}
+                        text={
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              padding: "5px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <Checkbox
+                              style={{ marginBottom: "0px" }}
+                              checked={
+                                selectedPages.length === 1 &&
+                                store.activePage &&
+                                selectedPages[0] ===
+                                  store.pages.findIndex(
+                                    (p) => p.id === store.activePage.id
+                                  ) +
+                                    1
+                              }
+                              onClick={(e) => e.stopPropagation()}
+                              label={`Current Page (${
+                                store.activePage
+                                  ? store.pages.findIndex(
+                                      (p) => p.id === store.activePage.id
+                                    ) + 1
+                                  : 1
+                              })`}
+                            />
+                          </div>
+                        }
+                        shouldDismissPopover={false}
+                      />
+                      {store.pages.map((_, index) => {
+                        const _Width =
+                          _.width === "auto" ? store.width : _.width;
+                        const _Height =
+                          _.height === "auto" ? store.height : _.height;
 
-                {selection === "custom" && (
-                  <div style={{ display: "flex", gap: "10px" }}>
-                    <InputGroup
-                      placeholder="From"
-                      value={fromPage}
-                      onChange={(e) => setFromPage(e.target.value)}
-                    />
-                    <InputGroup
-                      placeholder="To"
-                      value={toPage}
-                      onChange={(e) => setToPage(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "10px",
-                    justifyContent: "center",
-                  }}
+                        const pageNumber = index + 1;
+                        const isChecked = selectedPages.includes(pageNumber);
+                        return (
+                          <MenuItem
+                            key={pageNumber}
+                            text={
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  padding: "5px",
+                                  cursor: "pointer",
+                                }}
+                                onClick={() => {
+                                  let updated = [...selectedPages];
+                                  if (isChecked) {
+                                    updated = updated.filter(
+                                      (p) => p !== pageNumber
+                                    );
+                                  } else {
+                                    updated.push(pageNumber);
+                                  }
+                                  setSelectedPages(updated);
+                                  setIsAllSelected(
+                                    updated.length === store.pages.length
+                                  );
+                                }}
+                              >
+                                <Checkbox
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    e.stopPropagation(); // Prevent double toggle from outer click
+                                    let updated = [...selectedPages];
+                                    if (isChecked) {
+                                      updated = updated.filter(
+                                        (p) => p !== pageNumber
+                                      );
+                                    } else {
+                                      updated.push(pageNumber);
+                                    }
+                                    setSelectedPages(updated);
+                                    setIsAllSelected(
+                                      updated.length === store.pages.length
+                                    );
+                                  }}
+                                  style={{ margin: 0 }}
+                                />
+                                <img
+                                  src={pageThumbnails[index]}
+                                  alt={`Page ${pageNumber}`}
+                                  style={{
+                                    width: "40px",
+                                    height: "40px",
+                                    objectFit: "contain",
+                                    borderRadius: "4px",
+                                    marginLeft: "10px",
+                                  }}
+                                />
+                                <div style={{ marginLeft: "16px" }}>
+                                  <span style={{ fontWeight: 700 }}>
+                                    Page {pageNumber}
+                                  </span>
+                                  <br />
+                                  <span
+                                    style={{
+                                      fontSize: "12px",
+                                      color: "#a5a5a5",
+                                    }}
+                                  >
+                                    {_Width} × {_Height}
+                                  </span>
+                                </div>
+                              </div>
+                            }
+                            shouldDismissPopover={false}
+                          />
+                        );
+                      })}
+                    </Menu>
+                  }
                 >
                   <Button
-                    disabled={loading}
-                    intent="primary"
-                    onClick={downloadVideo}
-                  >
-                    {loading
-                      ? progress > 0
-                        ? `Downloading... ${progress}%`
-                        : "Downloading..."
-                      : "Save Video"}
-                  </Button>
-                  <Button intent="primary" onClick={saveAssetsImage}>
-                    {saving ? "Saving..." : "Save Assets"}
-                  </Button>
-                </div>
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                    text={getSelectedPagesLabel()}
+                    rightIcon="double-caret-vertical"
+                  />
+                </Popover>
+                <Button
+                  intent="primary"
+                  disabled={loading || saving}
+                  onClick={() => {
+                    if (selectedPages.length === 0) {
+                      // Select all pages if none selected
+                      const allPages = store.pages.map((_, idx) => idx + 1);
+                      setSelectedPages(allPages);
+
+                      setTimeout(() => {
+                        triggerDownload(allPages);
+                      }, 0);
+                    } else {
+                      triggerDownload(selectedPages);
+                    }
+                  }}
+                >
+                  {loading || saving
+                    ? loading
+                      ? `Downloading... ${progress}%`
+                      : "Saving..."
+                    : "Download"}
+                </Button>
               </div>
             }
           >
@@ -351,31 +631,8 @@ export default observer(({ store }) => {
             setPreviwOpen={setPreviwOpen}
             preview={preview}
           />
-          <SaveFileDialog
-            isDialogOpen={isDialogOpen}
-            setDialogOpen={setDialogOpen}
-            fileName={fileName}
-            setFileName={setFileName}
-            loading={loading}
-            progress={progress}
-            saving={saving}
-            preview={preview}
-            downloadVideo={downloadVideo}
-            saveAssetsImage={saveAssetsImage}
-          />
         </Navbar.Group>
       </NavInner>
     </NavbarContainer>
   );
 });
-
-// Function to save current design as JSON
-// const saveTemplate = async () => {
-//   const json = store.toJSON();
-//   const Preview = await store.toDataURL();
-//   const payload = {
-//     previewImage: Preview,
-//     templateJson: JSON.stringify(json),
-//   };
-//   saveMyTemplateAction(payload);
-// };
