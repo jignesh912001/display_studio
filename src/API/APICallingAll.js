@@ -1,9 +1,9 @@
 import axios from "axios";
 import { nanoid } from "nanoid";
 
-// const url = 'https://back.disploy.com/api/';
+const url = 'https://back.disploy.com/api/';
 // const url = "https://disploystage.disploy.com/api/";
-const url = "https://disploystage.thedestinysolutions.com/api/";
+// const url = "https://disploystage.thedestinysolutions.com/api/";
 const token = sessionStorage.getItem('disploy_studio_token');
 
 const isSignedIn = () => {

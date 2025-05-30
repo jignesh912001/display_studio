@@ -127,7 +127,7 @@ export const MyDesignsPanel = observer(({ store }) => {
         >
           Create new design
         </Button>
-        <Button
+        {/* <Button
           onClick={saveTemplate}
           style={{
             background: "#252a31",
@@ -138,7 +138,7 @@ export const MyDesignsPanel = observer(({ store }) => {
           }}
         >
           Save Template
-        </Button>
+        </Button> */}
       </div>
 
       {!designsLoadings && designs?.length === 0 ? (

@@ -12,7 +12,7 @@ export const TemplatesPanel = observer(({ store }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState('');
-
+  
 
   useEffect(() => {
     setIsLoading(true);
@@ -51,7 +51,7 @@ export const TemplatesPanel = observer(({ store }) => {
     if (!query) {
       setFilteredImages(images);
     } else {
-      const filtered = data.filter( 
+      const filtered = data.filter(
         (image) => image.assetName?.toLowerCase().includes(query) // 🔥 Search inside `name`
       );
       // setFilteredImages(filtered);
@@ -107,11 +107,17 @@ export const TemplatesPanel = observer(({ store }) => {
           const json = await req.json();
           if (json && json.pages) {
             const currentPage = store.activePage;
-            json.pages.forEach((page) => {
-              page.children.forEach((element) => {
-                currentPage.addElement(element);
-                sessionStorage.setItem("isSaveTemplate", true);
-              });
+            json.pages.forEach((templatePage, index) => {
+              const targetPage =
+                index === 0 ? currentPage : store.addPage();
+              if (templatePage.background) {
+                targetPage.set({ background: templatePage.background });
+              }
+              if (Array.isArray(templatePage.children)) {
+                templatePage.children.forEach((element) => {
+                  targetPage.addElement(element);
+                });
+              }
             });
           }
         }}
