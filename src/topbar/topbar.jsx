@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { observer } from "mobx-react-lite";
-import {  reaction } from "mobx";
+import { reaction } from "mobx";
+import BiArrowBack from "@meronex/icons/bi/BiArrowBack";
 
 import {
   Navbar,
@@ -16,12 +17,15 @@ import {
   Checkbox,
   Menu,
   MenuItem,
+  HTMLSelect,
+  Divider,
 } from "@blueprintjs/core";
 import styled from "polotno/utils/styled";
-import { saveAssetsAction } from "../API/APICallingAll";
+import { saveAssetsAction, saveMyTemplateAction } from "../API/APICallingAll";
 import PreviewDialog from "../Page/DialogPreview";
 
 import { createStore } from "polotno/model/store";
+import LoadingBar from "react-top-loading-bar";
 
 const NavbarContainer = styled("div")`
   white-space: nowrap;
@@ -54,10 +58,12 @@ export default observer(({ store }) => {
 
   const [selectedPages, setSelectedPages] = useState([]);
   const [isAllSelected, setIsAllSelected] = useState(false);
-  const [pageThumbnails, setPageThumbnails] = useState([]);
+  const [mode, setMode] = useState(null);
   const [downloadFormat, setDownloadFormat] = useState("png");
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const loadingRef = useRef(false);
+  const progressRef = useRef(null);
   const thumbnailStoreRef = useRef(createStore());
 
   const dataURLToBlob = (dataURL) => {
@@ -265,57 +271,57 @@ export default observer(({ store }) => {
     }
   };
 
-  useEffect(() => {
-    const dispose = reaction(
-      () =>
-        store.pages.map((page) => ({
-          id: page.id,
-          width: page.width,
-          height: page.height,
-          elements: page.children
-            ? page.children.map((el) => ({
-                id: el.id,
-                x: el.x,
-                y: el.y,
-                width: el.width,
-                height: el.height,
-                fill: el.fill,
-                stroke: el.stroke,
-                rotation: el.rotation,
-                // add any other property that should trigger update
-              }))
-            : [],
-        })),
-      async () => {
-        if (loadingRef.current) {
-          return;
-        }
-        loadingRef.current = true;
+  // useEffect(() => {
+  //   const dispose = reaction(
+  //     () =>
+  //       store.pages.map((page) => ({
+  //         id: page.id,
+  //         width: page.width,
+  //         height: page.height,
+  //         elements: page.children
+  //           ? page.children.map((el) => ({
+  //               id: el.id,
+  //               x: el.x,
+  //               y: el.y,
+  //               width: el.width,
+  //               height: el.height,
+  //               fill: el.fill,
+  //               stroke: el.stroke,
+  //               rotation: el.rotation,
+  //               // add any other property that should trigger update
+  //             }))
+  //           : [],
+  //       })),
+  //     async () => {
+  //       if (loadingRef.current) {
+  //         return;
+  //       }
+  //       loadingRef.current = true;
 
-        try {
-          const originalJSON = await store.toJSON();
-          const previews = [];
+  //       try {
+  //         const originalJSON = await store.toJSON();
+  //         const previews = [];
 
-          for (let i = 0; i < originalJSON.pages.length; i++) {
-            const page = originalJSON.pages[i];
-            await store.loadJSON({ pages: [page] });
-            await new Promise((res) => setTimeout(res, 150));
-            const image = await store.toDataURL({ width: 120, height: 80 });
-            previews.push(image);
-          }
+  //         for (let i = 0; i < originalJSON.pages.length; i++) {
+  //           const page = originalJSON.pages[i];
+  //           await store.loadJSON({ pages: [page] });
+  //           await new Promise((res) => setTimeout(res, 150));
+  //           const image = await store.toDataURL({ width: 120, height: 80 });
+  //           previews.push(image);
+  //         }
 
-          await store.loadJSON(originalJSON);
-          setPageThumbnails(previews);
-        } catch (err) {
-          console.error("Error generating thumbnails:", err);
-        } finally {
-          loadingRef.current = false;
-        }
-      },
-      { fireImmediately: true }
-    );
-    return () => dispose();
-  }, [store]);
+  //         await store.loadJSON(originalJSON);
+  //         setPageThumbnails(previews);
+  //       } catch (err) {
+  //         console.error("Error generating thumbnails:", err);
+  //       } finally {
+  //         loadingRef.current = false;
+  //       }
+  //     },
+  //     { fireImmediately: true }
+  //   );
+  //   return () => dispose();
+  // }, [store]);
 
   const totalPages = store.pages.length;
   const pageRangeLabel = totalPages > 0 ? `All (${1}-${totalPages})` : "All";
@@ -358,281 +364,357 @@ export default observer(({ store }) => {
       saveAssetsImage(downloadFormat, pagesToDownload);
     }
   }
+
+  const saveTemplate = async () => {
+    try {
+      progressRef.current.continuousStart();
+      const json = store.toJSON();
+      const Preview = await store.toDataURL();
+      const payload = {
+        previewImage: Preview,
+        templateJson: JSON.stringify(json),
+        file: {
+          fileType: "Template",
+          filePath: Preview,
+          fileName: `Template-${fileName}.png`,
+          isChange: true,
+        },
+      };
+      await saveMyTemplateAction(payload);
+      sessionStorage.setItem("isSaveTemplate", false);
+      console.log("Template saved successfully");
+      progressRef.current.complete(); // Hide progress bar on success
+      sessionStorage.removeItem();
+    } catch (error) {
+      console.error("Error fetching template JSON saveTemplate :", error);
+      progressRef.current.staticStart(); // Keep progress bar visible on error
+      return null;
+    }
+  };
   return (
-    <NavbarContainer className="bp5-navbar">
-      <style>
-        {`
+    <>
+      <NavbarContainer className="bp5-navbar">
+        <style>
+          {`
         .bp5-form-group .bp5-label {
           margin: 0 !important;
         }
       `}
-      </style>
-      <NavInner>
-        <Navbar.Group align={Alignment.LEFT}>
-          <FormGroup
-            label="Enter file name"
-            labelFor="file-name-input"
-            style={{
-              fontSize: "14px",
-              fontWeight: "bold",
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              margin: "0px",
-              gap: "10px",
-            }}
-          >
-            <InputGroup
-              id="file-name-input"
-              value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-              placeholder="Enter file name"
+        </style>
+        <NavInner>
+          <Navbar.Group align={Alignment.LEFT}>
+            <FormGroup
+              label="Enter file name"
+              labelFor="file-name-input"
               style={{
-                borderRadius: "8px",
-                padding: "8px",
-                color: "#FFF",
+                fontSize: "14px",
                 fontWeight: "bold",
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                margin: "0px",
+                gap: "10px",
               }}
-            />
-          </FormGroup>
-        </Navbar.Group>
-
-        <Navbar.Group align={Alignment.RIGHT}>
-          <Button style={{ marginRight: "10px" }} onClick={preparePreview}>
-            Preview
-          </Button>
-
-          <Popover
-            interactionKind={PopoverInteractionKind.CLICK}
-            position={Position.BOTTOM_LEFT}
-            content={
-              <div
+            >
+              <InputGroup
+                id="file-name-input"
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                placeholder="Enter file name"
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                  width: "300px",
-                  padding: 10,
-                  paddingBottom: "20px",
+                  borderRadius: "8px",
+                  padding: "8px",
+                  color: "#FFF",
+                  fontWeight: "bold",
                 }}
-              >
-                {/* <DownloadMenu /> */}
-                <FormGroup
-                  label="Select format"
-                  style={{ marginBottom: "0px" }}
-                >
-                  <RadioGroup
-                    inline
-                    selectedValue={downloadFormat}
-                    onChange={(e) => setDownloadFormat(e.currentTarget.value)}
-                  >
-                    <Radio label="MP4 (Video)" value="mp4" />
-                    <Radio label="PNG (Image)" value="png" />
-                    <Radio label="JPG (Image)" value="jpg" />
-                  </RadioGroup>
-                </FormGroup>
-                <Popover
-                  position="bottom"
-                  content={
-                    <Menu
-                      style={{
-                        width: "300px",
-                        maxHeight: "300px",
-                        overflowY: "auto",
-                      }}
-                    >
-                      <MenuItem
-                        text={
-                          <div style={{ padding: "5px" }}>
-                            <Checkbox
-                              label={pageRangeLabel}
-                              style={{ marginBottom: "0px" }}
-                              checked={isAllSelected}
-                              onChange={() => {
-                                if (isAllSelected) {
-                                  setIsAllSelected(false);
-                                  setSelectedPages([]);
-                                } else {
-                                  const pageNumbers = store.pages.map(
-                                    (_, idx) => idx + 1
-                                  );
-                                  setIsAllSelected(true);
-                                  setSelectedPages(pageNumbers);
-                                }
-                              }}
-                            />
-                          </div>
-                        }
-                        shouldDismissPopover={false}
-                      />
-                      <MenuItem
-                        onClick={toggleCurrentPageSelection}
-                        text={
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              padding: "5px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <Checkbox
-                              style={{ marginBottom: "0px" }}
-                              checked={
-                                selectedPages.length === 1 &&
-                                store.activePage &&
-                                selectedPages[0] ===
-                                  store.pages.findIndex(
-                                    (p) => p.id === store.activePage.id
-                                  ) +
-                                    1
-                              }
-                              onClick={(e) => e.stopPropagation()}
-                              label={`Current Page (${
-                                store.activePage
-                                  ? store.pages.findIndex(
-                                      (p) => p.id === store.activePage.id
-                                    ) + 1
-                                  : 1
-                              })`}
-                            />
-                          </div>
-                        }
-                        shouldDismissPopover={false}
-                      />
-                      {store.pages.map((_, index) => {
-                        const _Width =
-                          _.width === "auto" ? store.width : _.width;
-                        const _Height =
-                          _.height === "auto" ? store.height : _.height;
+              />
+            </FormGroup>
+          </Navbar.Group>
 
-                        const pageNumber = index + 1;
-                        const isChecked = selectedPages.includes(pageNumber);
-                        return (
-                          <MenuItem
-                            key={pageNumber}
-                            text={
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  padding: "5px",
-                                  cursor: "pointer",
-                                }}
-                                onClick={() => {
-                                  let updated = [...selectedPages];
-                                  if (isChecked) {
-                                    updated = updated.filter(
-                                      (p) => p !== pageNumber
-                                    );
-                                  } else {
-                                    updated.push(pageNumber);
-                                  }
-                                  setSelectedPages(updated);
-                                  setIsAllSelected(
-                                    updated.length === store.pages.length
-                                  );
-                                }}
-                              >
-                                <Checkbox
-                                  checked={isChecked}
-                                  onChange={(e) => {
-                                    e.stopPropagation(); // Prevent double toggle from outer click
-                                    let updated = [...selectedPages];
-                                    if (isChecked) {
-                                      updated = updated.filter(
-                                        (p) => p !== pageNumber
-                                      );
-                                    } else {
-                                      updated.push(pageNumber);
-                                    }
-                                    setSelectedPages(updated);
-                                    setIsAllSelected(
-                                      updated.length === store.pages.length
-                                    );
-                                  }}
-                                  style={{ margin: 0 }}
-                                />
-                                <img
-                                  src={pageThumbnails[index]}
-                                  alt={`Page ${pageNumber}`}
-                                  style={{
-                                    width: "40px",
-                                    height: "40px",
-                                    objectFit: "contain",
-                                    borderRadius: "4px",
-                                    marginLeft: "10px",
-                                  }}
-                                />
-                                <div style={{ marginLeft: "16px" }}>
-                                  <span style={{ fontWeight: 700 }}>
-                                    Page {pageNumber}
-                                  </span>
-                                  <br />
-                                  <span
-                                    style={{
-                                      fontSize: "12px",
-                                      color: "#a5a5a5",
-                                    }}
-                                  >
-                                    {_Width} × {_Height}
-                                  </span>
-                                </div>
-                              </div>
-                            }
-                            shouldDismissPopover={false}
-                          />
-                        );
-                      })}
-                    </Menu>
-                  }
-                >
-                  <Button
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      justifyContent: "space-between",
-                    }}
-                    text={getSelectedPagesLabel()}
-                    rightIcon="double-caret-vertical"
-                  />
-                </Popover>
-                <Button
-                  intent="primary"
-                  disabled={loading || saving}
-                  onClick={() => {
-                    if (selectedPages.length === 0) {
-                      // Select all pages if none selected
-                      const allPages = store.pages.map((_, idx) => idx + 1);
-                      setSelectedPages(allPages);
+          <Navbar.Group align={Alignment.RIGHT}>
+            <Button style={{ marginRight: "10px" }} onClick={preparePreview}>
+              Preview
+            </Button>
 
-                      setTimeout(() => {
-                        triggerDownload(allPages);
-                      }, 0);
-                    } else {
-                      triggerDownload(selectedPages);
-                    }
+            <Popover
+              interactionKind={PopoverInteractionKind.CLICK}
+              isOpen={popoverOpen}
+              position={Position.BOTTOM_LEFT}
+              onInteraction={(nextOpenState) => {
+                setPopoverOpen(nextOpenState);
+                if (!nextOpenState) {
+                  setMode(null);
+                }
+              }}
+              content={
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                    width: "300px",
+                    padding: '10px 10px 20px 10px',
+                    paddingBottom: "20px",
                   }}
                 >
-                  {loading || saving
-                    ? loading
-                      ? `Downloading... ${progress}%`
-                      : "Saving..."
-                    : "Download"}
-                </Button>
-              </div>
-            }
-          >
-            <Button>Download</Button>
-          </Popover>
+                  {mode === "download" ? (
+                    <>
+                      <div>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            gap: "6px",
+                            borderRadius: "4px",
+                            userSelect: "none",
+                            padding: "5px 0 5px 0",  
+                          }}
+                          onClick={() => {
+                            setMode(null);
+                          }}
+                        >
+                          <BiArrowBack size={16} />
+                          <span>Back</span>
+                        </span>
+                        <Divider />
+                      </div>
+                      <FormGroup
+                        label="Select format"
+                        style={{ marginBottom: "0px" }}
+                      >
+                        <HTMLSelect
+                          fill
+                          style={{ marginTop: "5px" }} // spacing between label and select
+                          value={downloadFormat}
+                          onChange={(e) => {
+                            setDownloadFormat(e.target.value);
+                          }}
+                        >
+                          <option value="mp4">MP4 (Video)</option>
+                          <option value="png">PNG (Image)</option>
+                          <option value="jpg">JPG (Image)</option>
+                        </HTMLSelect>
+                      </FormGroup>
 
-          <PreviewDialog
-            isPreviewOpen={isPreviewOpen}
-            setPreviwOpen={setPreviwOpen}
-            preview={preview}
-          />
-        </Navbar.Group>
-      </NavInner>
-    </NavbarContainer>
+                      <Popover
+                        position="bottom"
+                        content={
+                          <Menu
+                            style={{
+                              width: "300px",
+                              maxHeight: "300px",
+                              overflowY: "auto",
+                            }}
+                          >
+                            <MenuItem
+                              text={
+                                <div style={{ padding: "5px" }}>
+                                  <Checkbox
+                                    label={pageRangeLabel}
+                                    style={{ marginBottom: "0px" }}
+                                    checked={isAllSelected}
+                                    onChange={() => {
+                                      if (isAllSelected) {
+                                        setIsAllSelected(false);
+                                        setSelectedPages([]);
+                                      } else {
+                                        const pageNumbers = store.pages.map(
+                                          (_, idx) => idx + 1
+                                        );
+                                        setIsAllSelected(true);
+                                        setSelectedPages(pageNumbers);
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              }
+                              shouldDismissPopover={false}
+                            />
+                            <MenuItem
+                              onClick={toggleCurrentPageSelection}
+                              text={
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    padding: "5px",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  <Checkbox
+                                    style={{ marginBottom: "0px" }}
+                                    checked={
+                                      selectedPages.length === 1 &&
+                                      store.activePage &&
+                                      selectedPages[0] ===
+                                        store.pages.findIndex(
+                                          (p) => p.id === store.activePage.id
+                                        ) +
+                                          1
+                                    }
+                                    onClick={(e) => e.stopPropagation()}
+                                    label={`Current Page (${
+                                      store.activePage
+                                        ? store.pages.findIndex(
+                                            (p) => p.id === store.activePage.id
+                                          ) + 1
+                                        : 1
+                                    })`}
+                                  />
+                                </div>
+                              }
+                              shouldDismissPopover={false}
+                            />
+                            {store.pages.map((_, index) => {
+                              const _Width =
+                                _.width === "auto" ? store.width : _.width;
+                              const _Height =
+                                _.height === "auto" ? store.height : _.height;
+
+                              const pageNumber = index + 1;
+                              const isChecked =
+                                selectedPages.includes(pageNumber);
+
+                              return (
+                                <MenuItem
+                                  key={pageNumber}
+                                  text={
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        padding: "5px",
+                                        cursor: "pointer",
+                                      }}
+                                      onClick={() => {
+                                        let updated = [...selectedPages];
+                                        if (isChecked) {
+                                          updated = updated.filter(
+                                            (p) => p !== pageNumber
+                                          );
+                                        } else {
+                                          updated.push(pageNumber);
+                                        }
+                                        setSelectedPages(updated);
+                                        setIsAllSelected(
+                                          updated.length === store.pages.length
+                                        );
+                                      }}
+                                    >
+                                      <Checkbox
+                                        checked={isChecked}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          let updated = [...selectedPages];
+                                          if (isChecked) {
+                                            updated = updated.filter(
+                                              (p) => p !== pageNumber
+                                            );
+                                          } else {
+                                            updated.push(pageNumber);
+                                          }
+                                          setSelectedPages(updated);
+                                          setIsAllSelected(
+                                            updated.length ===
+                                              store.pages.length
+                                          );
+                                        }}
+                                        style={{ margin: 0 }}
+                                      />
+                                      <div style={{ marginLeft: "10px" }}>
+                                        <span style={{ fontWeight: 700 }}>
+                                          Page {pageNumber}
+                                        </span>
+                                        <br />
+                                        <span
+                                          style={{
+                                            fontSize: "12px",
+                                            color: "#a5a5a5",
+                                          }}
+                                        >
+                                          {_Width} × {_Height}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  }
+                                  shouldDismissPopover={false}
+                                />
+                              );
+                            })}
+                          </Menu>
+                        }
+                      >
+                        <Button
+                          style={{
+                            width: "100%",
+                            display: "flex",
+                            justifyContent: "space-between",
+                          }}
+                          text={getSelectedPagesLabel()}
+                          rightIcon="double-caret-vertical"
+                        />
+                      </Popover>
+
+                      <Button
+                        icon="download"
+                        intent="primary"
+                        disabled={loading || saving}
+                        onClick={() => {
+                          if (selectedPages.length === 0) {
+                            const allPages = store.pages.map(
+                              (_, idx) => idx + 1
+                            );
+                            setSelectedPages(allPages);
+                            setTimeout(() => {
+                              triggerDownload(allPages);
+                            }, 0);
+                          } else {
+                            triggerDownload(selectedPages);
+                          }
+                        }}
+                      >
+                        {loading || saving
+                          ? loading
+                            ? `Downloading... ${progress}%`
+                            : "Saving..."
+                          : `Download ${downloadFormat.toUpperCase()}`}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        icon="download"
+                        onClick={() => {
+                          setMode("download");
+                        }}
+                      >
+                        Download
+                      </Button>
+
+                      <Button
+                        icon="floppy-disk"
+                        intent="primary"
+                        onClick={saveTemplate}
+                      >
+                        Save Template
+                      </Button>
+                    </>
+                  )}
+                </div>
+              }
+            >
+              <Button>Download</Button>
+            </Popover>
+            <PreviewDialog
+              isPreviewOpen={isPreviewOpen}
+              setPreviwOpen={setPreviwOpen}
+              preview={preview}
+            />
+          </Navbar.Group>
+        </NavInner>
+      </NavbarContainer>
+      <LoadingBar color="#f11946" ref={progressRef} />
+    </>
   );
 });
