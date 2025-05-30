@@ -73,7 +73,6 @@ export const MyDesignsPanel = observer(({ store }) => {
   // Clear session and close dialog
   const handleClearSession = async () => {
     await localStorage.clear()
-    await sessionStorage.clear(); 
     await sessionStorage.removeItem("isSaveTemplate"); 
     await project.createNewDesign();
     setIsDialogOpen(false);
