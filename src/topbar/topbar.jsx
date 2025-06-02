@@ -27,6 +27,9 @@ import PreviewDialog from "../Page/DialogPreview";
 import { createStore } from "polotno/model/store";
 import LoadingBar from "react-top-loading-bar";
 
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+
 const NavbarContainer = styled("div")`
   white-space: nowrap;
   @media screen and (max-width: 500px) {
@@ -116,24 +119,29 @@ export default observer(({ store }) => {
   const saveAssetsImage = async (format = "png") => {
     setSaving(true);
     try {
+      const zip = new JSZip();
       const selectedPages = await getPagesToExport();
       if (!selectedPages) {
         setSaving(false);
         return;
       }
 
+      // Save full store JSON before modifications
       const originalJSON = await store.toJSON();
 
       for (let i = 0; i < selectedPages.length; i++) {
         const page = selectedPages[i];
-        await store.loadJSON({ pages: [page] });
+
+        // Create a temporary store state with all original data, but only one page for rendering
+        const tempJSON = {
+          ...originalJSON,
+          pages: [page], // keep only current page for rendering
+        };
+
+        await store.loadJSON(tempJSON);
         await new Promise((r) => setTimeout(r, 200));
 
-        // Here generate image with pixelRatio 2 and mime type accordingly
         const image = await store.toDataURL({ pixelRatio: 2 });
-
-        // If jpg is selected, convert png dataURL to jpg dataURL before converting blob (optional)
-        // For simplicity, you can keep png for now or add canvas conversion
 
         let blob;
         if (format === "jpg") {
@@ -142,31 +150,37 @@ export default observer(({ store }) => {
           blob = dataURLToBlob(image);
         }
 
+        const fileNameToSave = `${fileName}-page-${i + 1}.${format}`;
+        zip.file(fileNameToSave, blob);
+
+        // Upload to server
         const formData = new FormData();
-        formData.append("File", blob, `image.${format}`);
+        formData.append("File", blob, fileNameToSave);
         formData.append("Operation", "Insert");
         formData.append("AssetType", "Image");
         formData.append("IsActive", true);
         formData.append("IsDelete", false);
         formData.append("FolderID", 0);
         await saveAssetsAction(formData);
-
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = `${fileName}-page-${i + 1}.${format}`;
-        link.click();
       }
 
+      // Restore original full store state
       await store.loadJSON(originalJSON);
 
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      saveAs(zipBlob, `${fileName}.zip`);
+
+      setSaving(false);
+
+      // Uncomment if needed for your flow
       setTimeout(() => {
         sessionStorage.setItem("disploy_studio_token", "");
         window.close();
       }, 300);
-
       setSaving(false);
     } catch (error) {
       console.error("Error exporting image:", error);
+      setSaving(false);
     }
   };
 
@@ -453,7 +467,7 @@ export default observer(({ store }) => {
                     flexDirection: "column",
                     gap: "10px",
                     width: "300px",
-                    padding: '10px 10px 20px 10px',
+                    padding: "10px 10px 20px 10px",
                     paddingBottom: "20px",
                   }}
                 >
@@ -468,7 +482,7 @@ export default observer(({ store }) => {
                             gap: "6px",
                             borderRadius: "4px",
                             userSelect: "none",
-                            padding: "5px 0 5px 0",  
+                            padding: "5px 0 5px 0",
                           }}
                           onClick={() => {
                             setMode(null);
