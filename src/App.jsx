@@ -8,6 +8,7 @@ import { ZoomButtons } from 'polotno/toolbar/zoom-buttons';
 import { ElementsSection, SidePanel, SizeSection, TextSection, BackgroundSection, PhotosSection } from 'polotno/side-panel';
 import { Workspace } from 'polotno/canvas/workspace';
 import { setTranslations } from 'polotno/config';
+import { PagesTimeline } from 'polotno/pages-timeline';
 
 import { loadFile } from './file';
 import { MyDesignsSection } from './sections/my-designs-section';
@@ -175,7 +176,7 @@ const App = observer(({ store }) => {
                 <Toolbar store={store} />
                 <Workspace store={store} />
                 <ZoomButtons store={store} />
-                {/* <PagesTimeline store={store} /> */}
+                <PagesTimeline store={store} />
               </WorkspaceWrap>
             </PolotnoContainer>
           </div>
