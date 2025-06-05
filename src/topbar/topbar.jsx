@@ -446,9 +446,9 @@ export default observer(({ store }) => {
           </Navbar.Group>
 
           <Navbar.Group align={Alignment.RIGHT}>
-            <Button style={{ marginRight: "10px" }} onClick={preparePreview}>
+            {/* <Button style={{ marginRight: "10px" }} onClick={preparePreview}>
               Preview
-            </Button>
+            </Button> */}
 
             <Popover
               interactionKind={PopoverInteractionKind.CLICK}
